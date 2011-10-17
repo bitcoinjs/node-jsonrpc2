@@ -37,6 +37,11 @@ var Client = function(port, host, user, password) {
     headers['Host'] = host;
     headers['Content-Length'] = requestJSON.length;
 
+    // Report errors from the http client. This also prevents crashes since an exception is thrown if we don't handle this event.
+    client.on('error', function(err) {
+      callback(err);
+    });
+
     // Now we'll make a request to the server
     var request = client.request('POST', path || '/', headers);
     request.write(requestJSON);
