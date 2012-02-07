@@ -129,7 +129,8 @@ Client.prototype.connectHttp = function connectHttp(method, params, opts, callba
   var requestJSON = JSON.stringify({
     'id': id,
     'method': method,
-    'params': params
+    'params': params,
+    'jsonrpc': '2.0'
   });
 
   // Report errors from the http client. This also prevents crashes since
@@ -148,7 +149,7 @@ Client.prototype.connectHttp = function connectHttp(method, params, opts, callba
 
   // Then we build some basic headers.
   headers['Host'] = this.host;
-  headers['Content-Length'] = requestJSON.length;
+  headers['Content-Length'] = Buffer.byteLength(requestJSON, 'utf8');
 
   // Now we'll make a request to the server
   var request = client.request('POST', opts.path || '/', headers);
