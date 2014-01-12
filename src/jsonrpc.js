@@ -1,4 +1,3 @@
-var util = require('util');
 var net = require('net');
 var http = require('http');
 var util = require('util');
