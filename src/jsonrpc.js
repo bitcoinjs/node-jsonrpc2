@@ -69,8 +69,10 @@ Endpoint.prototype.expose = function(name, func, scope)
  */
 Endpoint.prototype.handleCall = function handleCall(decoded, conn, callback)
 {
+  var paramLog = Array.isArray(decoded.params) ? decoded.params.join(', ') : JSON.stringify(decoded.params);
+    
   Endpoint.trace('<--', 'Request (id ' + decoded.id + '): ' + 
-                 decoded.method + '(' + decoded.params.join(', ') + ')');
+                 decoded.method + '(' + paramLog + ')');
 
   if (!this.functions.hasOwnProperty(decoded.method)) {
     callback(new Error("Unknown RPC call '"+decoded.method+"'"));
@@ -121,7 +123,6 @@ Client.prototype.connectHttp = function connectHttp(method, params, opts, callba
   }
   opts = opts || {};
 
-  var client = http.createClient(this.port, this.host);
 
   var id = 1;
 
@@ -131,12 +132,6 @@ Client.prototype.connectHttp = function connectHttp(method, params, opts, callba
     'method': method,
     'params': params,
     'jsonrpc': '2.0'
-  });
-
-  // Report errors from the http client. This also prevents crashes since
-  // an exception is thrown if we don't handle this event.
-  client.on('error', function(err) {
-    callback(err);
   });
 
   var headers = {};
@@ -150,11 +145,20 @@ Client.prototype.connectHttp = function connectHttp(method, params, opts, callba
   // Then we build some basic headers.
   headers['Host'] = this.host;
   headers['Content-Length'] = Buffer.byteLength(requestJSON, 'utf8');
+	
+  var client = http.request({
+    'port': this.port, 
+    'host': this.host,
 
-  // Now we'll make a request to the server
-  var request = client.request('POST', opts.path || '/', headers);
-  request.write(requestJSON);
-  request.on('response', callback.bind(this, id, request));
+    'method': 'POST',
+    'path': opts.path || '/',
+    'headers' : headers
+  }, callback.bind(this, id, client));
+  client.write(requestJSON);
+
+  client.on('error', function(err) {
+    callback(err);
+  });
 };
 
 /**
@@ -379,7 +383,11 @@ Server.prototype.handleHttp = function(req, res)
   }
 
   var handle = function (buf) {
-    var decoded = JSON.parse(buf);
+	try{
+      var decoded = JSON.parse(buf);
+    }catch(e){
+      var decoded = {};
+	}
 
     // Check for the required fields, and if they aren't there, then
     // dispatch to the handleHttpError function.
